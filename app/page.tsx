@@ -3,17 +3,14 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../utils/supabaseClient';
 
-// Edge Function 호출 유틸
+// Edge Function 호출 유틸 (supabase.functions.invoke 사용)
 async function sendActionToEdge(action: string, userId: string) {
-  const res = await fetch('https://your-supabase-project-id.supabase.co/functions/v1/trpg-action', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ action, userId }),
+  const { data, error } = await supabase.functions.invoke('gm-ai', {
+    body: { action, userId },
   });
-  if (!res.ok) throw new Error('서버 오류');
-  return res.json();
+  console.log('res: ', data);
+  if (error) throw new Error(error.message);
+  return JSON.parse(data);
 }
 
 export default function Home() {
@@ -51,8 +48,9 @@ export default function Home() {
     setPending(true);
     setError('');
     try {
+      setStory(prev => [...prev, `> ${action}`]);
       const res = await sendActionToEdge(action, user.id);
-      setStory(prev => [...prev, `> ${action}`, res.result, res.nextQuestion]);
+      setStory(prev => [...prev, `> ${res.result}`, `> ${res.nextQuestion}`]);
       setAction('');
     } catch (err: any) {
       setError('서버와 통신 중 오류가 발생했습니다.');
